@@ -1,247 +1,228 @@
-import { useState, useRef } from "react";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SwipeLearn AI</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0e0e10; font-family: 'DM Sans', 'Segoe UI', sans-serif; min-height: 100vh; }
+    input { background: #1a1a20; border: 1px solid #2e2e3a; border-radius: 12px; padding: 11px 14px; font-size: 15px; color: #fff; outline: none; width: 100%; font-family: inherit; }
+    input::placeholder { color: #444; }
+    button { font-family: inherit; border: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
  
-const TAG_COLORS = {
-  "Overview": { bg: "#E6F1FB", text: "#185FA5" },
-  "Key Concepts": { bg: "#E1F5EE", text: "#0F6E56" },
-  "Real World Use": { bg: "#FAEEDA", text: "#854F0B" },
-  "Fun Fact": { bg: "#FBEAF0", text: "#993556" },
-  "Did You Know": { bg: "#FBEAF0", text: "#993556" },
-  "History": { bg: "#F1EFE8", text: "#5F5E5A" },
-  "How It Works": { bg: "#EAF3DE", text: "#3B6D11" },
-  "Common Myths": { bg: "#FCEBEB", text: "#A32D2D" },
-  "Quick Tip": { bg: "#E6F1FB", text: "#185FA5" },
-  "Deep Dive": { bg: "#EEEDFE", text: "#534AB7" },
-};
+  <script type="text/babel">
+    const { useState, useRef } = React;
  
-export default function SwipeLearn() {
-  const [topic, setTopic] = useState("");
-  const [cardCount, setCardCount] = useState(5);
-  const [cards, setCards] = useState([]);
-  const [idx, setIdx] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [animDir, setAnimDir] = useState(null);
-  const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
+    const TAG_COLORS = {
+      "Overview":      { bg: "#E6F1FB", text: "#185FA5" },
+      "Key Concepts":  { bg: "#E1F5EE", text: "#0F6E56" },
+      "Real World Use":{ bg: "#FAEEDA", text: "#854F0B" },
+      "Fun Fact":      { bg: "#FBEAF0", text: "#993556" },
+      "Did You Know":  { bg: "#FBEAF0", text: "#993556" },
+      "History":       { bg: "#F1EFE8", text: "#5F5E5A" },
+      "How It Works":  { bg: "#EAF3DE", text: "#3B6D11" },
+      "Common Myths":  { bg: "#FCEBEB", text: "#A32D2D" },
+      "Quick Tip":     { bg: "#E6F1FB", text: "#185FA5" },
+      "Deep Dive":     { bg: "#EEEDFE", text: "#534AB7" },
+    };
  
-  async function generate() {
-    const t = topic.trim();
-    if (!t) return;
-    setError("");
-    setCards([]);
-    setIdx(0);
-    setLoading(true);
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: `You are SwipeLearn AI. Teach any topic using exactly ${cardCount} short cards. Rules: conversational language, 20-50 words per card, no markdown, no bullets, no intros. Choose fitting titles from: Overview, Key Concepts, Real World Use, Fun Fact, Did You Know, History, How It Works, Common Myths, Quick Tip, Deep Dive.
+    function App() {
+      const [topic, setTopic] = useState("");
+      const [cardCount, setCardCount] = useState(5);
+      const [cards, setCards] = useState([]);
+      const [idx, setIdx] = useState(0);
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState("");
+      const [animDir, setAnimDir] = useState(null);
+      const touchStartX = useRef(null);
+      const touchStartY = useRef(null);
+ 
+      async function generate() {
+        const t = topic.trim();
+        if (!t) return;
+        setError(""); setCards([]); setIdx(0); setLoading(true);
+        try {
+          const res = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 1000,
+              system: `You are SwipeLearn AI. Teach any topic using exactly ${cardCount} short cards. Rules: conversational language, 20-50 words per card, no markdown, no bullets, no intros. Choose fitting titles from: Overview, Key Concepts, Real World Use, Fun Fact, Did You Know, History, How It Works, Common Myths, Quick Tip, Deep Dive.
 Return ONLY a raw JSON array with exactly ${cardCount} items, no backticks, no explanation:
 [{"title":"...","content":"..."},...]`,
-          messages: [{ role: "user", content: `TOPIC: ${t}` }],
-        }),
-      });
-      const data = await res.json();
-      const raw = data.content?.filter(b => b.type === "text").map(b => b.text).join("") || "";
-      const clean = raw.replace(/```json|```/g, "").trim();
-      setCards(JSON.parse(clean));
-    } catch {
-      setError("Couldn't generate cards. Try again.");
-    }
-    setLoading(false);
-  }
+              messages: [{ role: "user", content: `TOPIC: ${t}` }],
+            }),
+          });
+          const data = await res.json();
+          const raw = data.content?.filter(b => b.type === "text").map(b => b.text).join("") || "";
+          const clean = raw.replace(/```json|```/g, "").trim();
+          setCards(JSON.parse(clean));
+        } catch {
+          setError("Couldn't generate cards. Try again.");
+        }
+        setLoading(false);
+      }
  
-  function navigate(dir) {
-    const next = idx + dir;
-    if (next < 0 || next >= cards.length) return;
-    setAnimDir(dir);
-    setTimeout(() => { setIdx(next); setAnimDir(null); }, 180);
-  }
+      function navigate(dir) {
+        const next = idx + dir;
+        if (next < 0 || next >= cards.length) return;
+        setAnimDir(dir);
+        setTimeout(() => { setIdx(next); setAnimDir(null); }, 180);
+      }
  
-  function onTouchStart(e) {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  }
+      function onTouchStart(e) {
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+      }
  
-  function onTouchEnd(e) {
-    if (touchStartX.current === null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    const dy = e.changedTouches[0].clientY - touchStartY.current;
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
-      navigate(dx < 0 ? 1 : -1);
-    }
-    touchStartX.current = null;
-  }
+      function onTouchEnd(e) {
+        if (touchStartX.current === null) return;
+        const dx = e.changedTouches[0].clientX - touchStartX.current;
+        const dy = e.changedTouches[0].clientY - touchStartY.current;
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) navigate(dx < 0 ? 1 : -1);
+        touchStartX.current = null;
+      }
  
-  const card = cards[idx];
-  const tagColor = card ? (TAG_COLORS[card.title] || { bg: "#E6F1FB", text: "#185FA5" }) : null;
+      const card = cards[idx];
+      const tagColor = card ? (TAG_COLORS[card.title] || { bg: "#E6F1FB", text: "#185FA5" }) : null;
  
-  return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#0e0e10",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "24px 16px",
-      fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
-    }}>
-      <div style={{ textAlign: "center", marginBottom: 28 }}>
-        <div style={{ fontSize: 28, fontWeight: 700, color: "#fff", letterSpacing: "-0.5px" }}>
-          Swipe<span style={{ color: "#A78BFA" }}>Learn</span>
-        </div>
-        <div style={{ fontSize: 13, color: "#6b6b7a", marginTop: 4 }}>AI-powered bite-sized learning</div>
-      </div>
+      return (
+        <div style={{ minHeight: "100vh", background: "#0e0e10", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px 16px" }}>
  
-      <div style={{ display: "flex", gap: 8, width: "100%", maxWidth: 360, marginBottom: 12 }}>
-        <input
-          value={topic}
-          onChange={e => setTopic(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && generate()}
-          placeholder="Enter any topic..."
-          style={{
-            flex: 1,
-            background: "#1a1a20",
-            border: "1px solid #2e2e3a",
-            borderRadius: 12,
-            padding: "11px 14px",
-            fontSize: 15,
-            color: "#fff",
-            outline: "none",
-          }}
-        />
-        <button
-          onClick={generate}
-          disabled={loading}
-          style={{
-            background: "#7C3AED",
-            color: "#fff",
-            border: "none",
-            borderRadius: 12,
-            padding: "11px 18px",
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: loading ? "not-allowed" : "pointer",
-            opacity: loading ? 0.6 : 1,
-            whiteSpace: "nowrap",
-          }}
-        >{loading ? "..." : "Learn →"}</button>
-      </div>
- 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", maxWidth: 360, marginBottom: 20 }}>
-        <span style={{ fontSize: 12, color: "#6b6b7a", whiteSpace: "nowrap" }}>Cards:</span>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {[3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-            <button key={n} onClick={() => setCardCount(n)} style={{
-              background: cardCount === n ? "#7C3AED" : "#1a1a20",
-              color: cardCount === n ? "#fff" : "#6b6b7a",
-              border: `1px solid ${cardCount === n ? "#7C3AED" : "#2e2e3a"}`,
-              borderRadius: 8,
-              padding: "4px 10px",
-              fontSize: 13,
-              fontWeight: cardCount === n ? 600 : 400,
-              cursor: "pointer",
-            }}>{n}</button>
-          ))}
-        </div>
-      </div>
- 
-      {error && <div style={{ color: "#f87171", fontSize: 13, marginBottom: 16 }}>{error}</div>}
- 
-      {loading && (
-        <div style={{ color: "#6b6b7a", fontSize: 14, textAlign: "center", padding: "32px 0" }}>
-          Generating cards for <span style={{ color: "#A78BFA" }}>{topic}</span>...
-        </div>
-      )}
- 
-      {card && !loading && (
-        <>
-          <div style={{ fontSize: 12, color: "#4b4b5a", marginBottom: 10, letterSpacing: "0.06em" }}>
-            {idx + 1} / {cards.length}
+          {/* Header */}
+          <div style={{ textAlign: "center", marginBottom: 28 }}>
+            <div style={{ fontSize: 30, fontWeight: 700, color: "#fff", letterSpacing: "-0.5px" }}>
+              Swipe<span style={{ color: "#A78BFA" }}>Learn</span>
+            </div>
+            <div style={{ fontSize: 13, color: "#6b6b7a", marginTop: 4 }}>AI-powered bite-sized learning</div>
           </div>
  
-          <div
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
-            style={{
-              width: "100%",
-              maxWidth: 360,
-              background: "#16161c",
-              border: "1px solid #2a2a36",
-              borderRadius: 20,
-              padding: "28px 24px",
-              minHeight: 200,
-              display: "flex",
-              flexDirection: "column",
-              gap: 16,
-              userSelect: "none",
-              touchAction: "pan-y",
-              transition: animDir !== null ? "opacity 0.18s, transform 0.18s" : "none",
-              opacity: animDir !== null ? 0 : 1,
-              transform: animDir !== null
-                ? `translateX(${animDir < 0 ? "28px" : "-28px"})`
-                : "translateX(0)",
-            }}
-          >
-            <span style={{
-              display: "inline-block",
-              background: tagColor.bg,
-              color: tagColor.text,
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: "0.09em",
-              textTransform: "uppercase",
-              padding: "3px 12px",
-              borderRadius: 999,
-              alignSelf: "flex-start",
-            }}>{card.title}</span>
+          {/* Input row */}
+          <div style={{ display: "flex", gap: 8, width: "100%", maxWidth: 380, marginBottom: 12 }}>
+            <input
+              value={topic}
+              onChange={e => setTopic(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && generate()}
+              placeholder="Enter any topic..."
+            />
+            <button
+              onClick={generate}
+              disabled={loading}
+              style={{
+                background: "#7C3AED", color: "#fff", borderRadius: 12,
+                padding: "11px 18px", fontSize: 14, fontWeight: 600,
+                opacity: loading ? 0.6 : 1, whiteSpace: "nowrap",
+                cursor: loading ? "not-allowed" : "pointer",
+              }}
+            >{loading ? "..." : "Learn →"}</button>
+          </div>
  
-            <div style={{ fontSize: 16, color: "#d1d1e0", lineHeight: 1.65, flex: 1 }}>
-              {card.content}
-            </div>
- 
-            <div style={{ fontSize: 11, color: "#3a3a4a", textAlign: "center" }}>
-              ← swipe →
+          {/* Card count picker */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", maxWidth: 380, marginBottom: 24 }}>
+            <span style={{ fontSize: 12, color: "#6b6b7a", whiteSpace: "nowrap" }}>Cards:</span>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {[3,4,5,6,7,8,9,10].map(n => (
+                <button key={n} onClick={() => setCardCount(n)} style={{
+                  background: cardCount === n ? "#7C3AED" : "#1a1a20",
+                  color: cardCount === n ? "#fff" : "#6b6b7a",
+                  border: `1px solid ${cardCount === n ? "#7C3AED" : "#2e2e3a"}`,
+                  borderRadius: 8, padding: "4px 10px", fontSize: 13,
+                  fontWeight: cardCount === n ? 600 : 400,
+                }}>{n}</button>
+              ))}
             </div>
           </div>
  
-          <div style={{ display: "flex", gap: 6, marginTop: 18 }}>
-            {cards.map((_, i) => (
-              <div key={i} style={{
-                width: i === idx ? 20 : 6,
-                height: 6,
-                borderRadius: 999,
-                background: i === idx ? "#7C3AED" : "#2e2e3a",
-                transition: "width 0.2s, background 0.2s",
-              }} />
-            ))}
-          </div>
+          {error && <div style={{ color: "#f87171", fontSize: 13, marginBottom: 16 }}>{error}</div>}
  
-          <div style={{ display: "flex", gap: 12, marginTop: 18 }}>
-            <button onClick={() => navigate(-1)} disabled={idx === 0} style={{
-              flex: 1, background: "#1a1a20", border: "1px solid #2e2e3a", borderRadius: 12,
-              padding: "10px 0", color: idx === 0 ? "#3a3a4a" : "#a0a0b0", fontSize: 14,
-              cursor: idx === 0 ? "not-allowed" : "pointer",
-            }}>← Prev</button>
-            <button onClick={() => navigate(1)} disabled={idx === cards.length - 1} style={{
-              flex: 1, background: "#1a1a20", border: "1px solid #2e2e3a", borderRadius: 12,
-              padding: "10px 0", color: idx === cards.length - 1 ? "#3a3a4a" : "#a0a0b0", fontSize: 14,
-              cursor: idx === cards.length - 1 ? "not-allowed" : "pointer",
-            }}>Next →</button>
-          </div>
-        </>
-      )}
+          {loading && (
+            <div style={{ color: "#6b6b7a", fontSize: 14, textAlign: "center", padding: "32px 0" }}>
+              Generating cards for <span style={{ color: "#A78BFA" }}>{topic}</span>...
+            </div>
+          )}
  
-      {!card && !loading && (
-        <div style={{ color: "#3a3a4a", fontSize: 14, textAlign: "center", marginTop: 16 }}>
-          Type a topic above to start learning
+          {card && !loading && (
+            <>
+              <div style={{ fontSize: 12, color: "#4b4b5a", marginBottom: 10, letterSpacing: "0.06em" }}>
+                {idx + 1} / {cards.length}
+              </div>
+ 
+              {/* Swipeable card */}
+              <div
+                onTouchStart={onTouchStart}
+                onTouchEnd={onTouchEnd}
+                style={{
+                  width: "100%", maxWidth: 380,
+                  background: "#16161c", border: "1px solid #2a2a36",
+                  borderRadius: 20, padding: "28px 24px", minHeight: 200,
+                  display: "flex", flexDirection: "column", gap: 16,
+                  userSelect: "none", touchAction: "pan-y",
+                  transition: animDir !== null ? "opacity 0.18s, transform 0.18s" : "none",
+                  opacity: animDir !== null ? 0 : 1,
+                  transform: animDir !== null ? `translateX(${animDir < 0 ? "28px" : "-28px"})` : "translateX(0)",
+                }}
+              >
+                <span style={{
+                  display: "inline-block", background: tagColor.bg, color: tagColor.text,
+                  fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase",
+                  padding: "3px 12px", borderRadius: 999, alignSelf: "flex-start",
+                }}>{card.title}</span>
+ 
+                <div style={{ fontSize: 16, color: "#d1d1e0", lineHeight: 1.7, flex: 1 }}>
+                  {card.content}
+                </div>
+ 
+                <div style={{ fontSize: 11, color: "#3a3a4a", textAlign: "center" }}>← swipe →</div>
+              </div>
+ 
+              {/* Progress dots */}
+              <div style={{ display: "flex", gap: 6, marginTop: 18 }}>
+                {cards.map((_, i) => (
+                  <div key={i} style={{
+                    width: i === idx ? 20 : 6, height: 6, borderRadius: 999,
+                    background: i === idx ? "#7C3AED" : "#2e2e3a",
+                    transition: "width 0.2s, background 0.2s",
+                  }} />
+                ))}
+              </div>
+ 
+              {/* Nav buttons */}
+              <div style={{ display: "flex", gap: 12, marginTop: 18, width: "100%", maxWidth: 380 }}>
+                <button onClick={() => navigate(-1)} disabled={idx === 0} style={{
+                  flex: 1, background: "#1a1a20", border: "1px solid #2e2e3a",
+                  borderRadius: 12, padding: "12px 0",
+                  color: idx === 0 ? "#3a3a4a" : "#a0a0b0", fontSize: 14,
+                  cursor: idx === 0 ? "not-allowed" : "pointer",
+                }}>← Prev</button>
+                <button onClick={() => navigate(1)} disabled={idx === cards.length - 1} style={{
+                  flex: 1, background: "#1a1a20", border: "1px solid #2e2e3a",
+                  borderRadius: 12, padding: "12px 0",
+                  color: idx === cards.length - 1 ? "#3a3a4a" : "#a0a0b0", fontSize: 14,
+                  cursor: idx === cards.length - 1 ? "not-allowed" : "pointer",
+                }}>Next →</button>
+              </div>
+            </>
+          )}
+ 
+          {!card && !loading && (
+            <div style={{ color: "#3a3a4a", fontSize: 14, textAlign: "center", marginTop: 8 }}>
+              Type a topic above to start learning
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  );
-}
+      );
+    }
  
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
