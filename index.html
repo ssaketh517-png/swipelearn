@@ -1,364 +1,247 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>SwipeLearn AI</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-<style>
-  :root {
-    --bg: #0e0e12;
-    --surface: #19191e;
-    --surface-high: #1f1f24;
-    --border: rgba(255,255,255,0.07);
-    --primary: #a78bfa;
-    --secondary: #60a5fa;
-    --text: #f4f0ff;
-    --text-dim: rgba(244,240,255,0.45);
-    --grad: linear-gradient(135deg, #a78bfa, #60a5fa);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Manrope', sans-serif; overflow: hidden; }
+import { useState, useRef } from "react";
  
-  /* SCREENS */
-  .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; transition: opacity 0.3s ease, transform 0.3s ease; }
-  .screen.hidden { opacity: 0; pointer-events: none; transform: translateY(16px); }
+const TAG_COLORS = {
+  "Overview": { bg: "#E6F1FB", text: "#185FA5" },
+  "Key Concepts": { bg: "#E1F5EE", text: "#0F6E56" },
+  "Real World Use": { bg: "#FAEEDA", text: "#854F0B" },
+  "Fun Fact": { bg: "#FBEAF0", text: "#993556" },
+  "Did You Know": { bg: "#FBEAF0", text: "#993556" },
+  "History": { bg: "#F1EFE8", text: "#5F5E5A" },
+  "How It Works": { bg: "#EAF3DE", text: "#3B6D11" },
+  "Common Myths": { bg: "#FCEBEB", text: "#A32D2D" },
+  "Quick Tip": { bg: "#E6F1FB", text: "#185FA5" },
+  "Deep Dive": { bg: "#EEEDFE", text: "#534AB7" },
+};
  
-  /* HOME */
-  #home { justify-content: flex-start; padding-top: 64px; max-width: 480px; margin: 0 auto; width: 100%; }
-  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 40px; }
-  .brand-name { font-family: 'Syne', sans-serif; font-size: 40px; font-weight: 800; letter-spacing: -2px; background: linear-gradient(90deg, #a78bfa, #60a5fa, #34d399, #a78bfa); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: shimmer 3s linear infinite; }
-  .brand-badge { font-family: 'Manrope', sans-serif; font-size: 9px; font-weight: 800; letter-spacing: 0.15em; color: #0e0e12; background: var(--grad); padding: 4px 8px; border-radius: 5px; text-transform: uppercase; }
-  .input-wrap { width: 100%; background: rgba(255,255,255,0.06); border-radius: 16px; border: 1.5px solid rgba(255,255,255,0.1); padding: 4px 4px 4px 16px; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-  .input-wrap input { flex: 1; border: none; background: none; font-family: 'Manrope', sans-serif; font-size: 15px; color: var(--text); font-weight: 400; padding: 12px 0; caret-color: var(--primary); }
-  .input-wrap input:focus { outline: none; }
-  .input-wrap input::placeholder { color: var(--text-dim); }
-  .go-btn { background: var(--grad); color: #fff; border: none; border-radius: 12px; padding: 12px 20px; font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; }
-  .go-btn:hover { opacity: 0.85; }
-  .go-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-  .error-msg { font-size: 12px; color: #f87171; margin-bottom: 8px; padding-left: 2px; min-height: 18px; }
-  .count-wrap { display: flex; align-items: center; gap: 12px; padding: 11px 16px; margin-bottom: 28px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); }
-  .count-label { font-size: 11px; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
-  .count-btns { display: flex; gap: 6px; }
-  .count-btn { width: 32px; height: 32px; border-radius: 8px; border: none; font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; background: rgba(255,255,255,0.07); color: var(--text-dim); }
-  .count-btn.active { background: var(--grad); color: #fff; box-shadow: 0 2px 12px rgba(167,139,250,0.4); }
-  .suggestions-label { font-size: 11px; color: rgba(255,255,255,0.25); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; }
-  .suggestions { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip { font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 99px; padding: 8px 14px; cursor: pointer; transition: all 0.15s; }
-  .chip:hover { background: rgba(255,255,255,0.12); color: #fff; }
+export default function SwipeLearn() {
+  const [topic, setTopic] = useState("");
+  const [cardCount, setCardCount] = useState(5);
+  const [cards, setCards] = useState([]);
+  const [idx, setIdx] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [animDir, setAnimDir] = useState(null);
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
  
-  /* LOADING */
-  #loading { gap: 24px; }
-  .orb-wrap { position: relative; width: 80px; height: 80px; }
-  .orb-bg { position: absolute; inset: 0; border-radius: 50%; animation: pulse-ring 1.5s ease infinite; filter: blur(2px); }
-  .orb-inner { position: absolute; inset: 6px; border-radius: 50%; background: var(--bg); display: flex; align-items: center; justify-content: center; }
-  .spinner { width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid transparent; border-top-color: var(--primary); border-right-color: var(--secondary); animation: spin 0.7s linear infinite; }
-  .loading-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; text-align: center; }
-  .loading-sub { font-size: 13px; color: var(--text-dim); font-weight: 300; text-align: center; margin-top: 4px; }
- 
-  /* CARDS */
-  #cards { justify-content: flex-start; padding: 20px; max-width: 480px; margin: 0 auto; width: 100%; }
-  .top-bar { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 14px; }
-  .back-btn { background: none; border: none; font-family: 'Manrope', sans-serif; font-size: 13px; color: var(--text-dim); cursor: pointer; transition: opacity 0.15s; padding: 4px 0; }
-  .back-btn:hover { opacity: 0.6; }
-  .counter { font-size: 12px; color: var(--text-dim); }
-  .progress-bar { display: flex; gap: 4px; width: 100%; margin-bottom: 14px; }
-  .progress-seg { flex: 1; height: 3px; border-radius: 99px; background: rgba(255,255,255,0.08); transition: background 0.3s ease; }
-  .progress-seg.done { background: var(--grad); }
-  .topic-label { font-size: 10px; color: rgba(255,255,255,0.25); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; width: 100%; }
-  .card { width: 100%; background: rgba(255,255,255,0.05); border-radius: 24px; padding: 26px 22px; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); flex: 1; min-height: 0; transition: transform 0.26s cubic-bezier(0.4,0,0.2,1), opacity 0.26s ease; }
-  .card.slide-up { transform: translateY(-45px); opacity: 0; }
-  .card.slide-down { transform: translateY(45px); opacity: 0; }
-  .tag { display: inline-flex; align-self: flex-start; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 5px 12px; border-radius: 99px; }
-  .card-title { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; color: var(--text); line-height: 1.2; letter-spacing: -0.2px; }
-  .fact-box { border-radius: 0 12px 12px 0; padding: 12px 14px; }
-  .fact-text { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.75); line-height: 1.6; font-style: italic; }
-  .body-text { font-size: 14px; color: rgba(255,255,255,0.55); line-height: 1.75; font-weight: 300; flex: 1; }
-  .nav-btns { display: flex; gap: 10px; width: 100%; margin-top: 14px; flex-shrink: 0; }
-  .prev-btn { flex: 1; padding: 13px; border-radius: 14px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); font-family: 'Manrope', sans-serif; font-size: 14px; color: rgba(255,255,255,0.5); font-weight: 500; cursor: pointer; transition: opacity 0.15s; }
-  .prev-btn:disabled { opacity: 0.15; cursor: not-allowed; }
-  .next-btn { flex: 2; padding: 13px; border-radius: 14px; background: var(--grad); border: none; font-family: 'Manrope', sans-serif; font-size: 14px; color: #fff; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
-  .prev-btn:hover:not(:disabled), .next-btn:hover { opacity: 0.8; }
- 
-  /* END */
-  #end { gap: 8px; max-width: 480px; width: 100%; }
-  .end-orb { width: 60px; height: 60px; border-radius: 50%; margin-bottom: 10px; box-shadow: 0 0 40px rgba(167,139,250,0.35); }
-  .end-title { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; margin-bottom: 4px; }
-  .end-sub { font-size: 14px; color: var(--text-dim); font-weight: 300; margin-bottom: 28px; line-height: 1.6; text-align: center; }
-  .end-sub span { color: var(--text); font-weight: 600; }
-  .end-input-wrap { width: 100%; background: rgba(255,255,255,0.06); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); padding: 4px 4px 4px 16px; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
-  .end-input-wrap input { flex: 1; border: none; background: none; font-family: 'Manrope', sans-serif; font-size: 15px; color: var(--text); font-weight: 400; padding: 12px 0; caret-color: var(--primary); }
-  .end-input-wrap input:focus { outline: none; }
-  .end-input-wrap input::placeholder { color: var(--text-dim); }
-  .home-link { background: none; border: none; font-family: 'Manrope', sans-serif; font-size: 13px; color: rgba(255,255,255,0.25); cursor: pointer; transition: opacity 0.15s; }
-  .home-link:hover { opacity: 0.6; }
- 
-  /* ANIMATIONS */
-  @keyframes shimmer { 0% { background-position: -200% center } 100% { background-position: 200% center } }
-  @keyframes spin { to { transform: rotate(360deg) } }
-  @keyframes pulse-ring { 0%,100% { transform: scale(1); opacity: 0.6 } 50% { transform: scale(1.08); opacity: 1 } }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: translateY(0) } }
-  .fade-in { animation: fadeIn 0.4s ease forwards; }
-</style>
-</head>
-<body>
- 
-<!-- HOME -->
-<div class="screen" id="home">
-  <div class="brand">
-    <span class="brand-name">SwipeLearn</span>
-    <span class="brand-badge">AI</span>
-  </div>
-  <div class="input-wrap">
-    <input id="main-input" placeholder="Ask about anything..." type="text"/>
-    <button class="go-btn" id="go-btn">Go →</button>
-  </div>
-  <div class="error-msg" id="error-msg"></div>
-  <div class="count-wrap">
-    <span class="count-label">Cards</span>
-    <div class="count-btns" id="count-btns">
-      <button class="count-btn" data-n="3">3</button>
-      <button class="count-btn" data-n="4">4</button>
-      <button class="count-btn active" data-n="5">5</button>
-      <button class="count-btn" data-n="6">6</button>
-      <button class="count-btn" data-n="7">7</button>
-      <button class="count-btn" data-n="8">8</button>
-    </div>
-  </div>
-  <div class="suggestions-label">Try these</div>
-  <div class="suggestions" id="suggestions"></div>
-</div>
- 
-<!-- LOADING -->
-<div class="screen hidden" id="loading">
-  <div class="orb-wrap">
-    <div class="orb-bg" id="orb-bg"></div>
-    <div class="orb-inner"><div class="spinner"></div></div>
-  </div>
-  <div>
-    <div class="loading-title">Generating</div>
-    <div class="loading-sub" id="loading-sub">5 cards on the way</div>
-  </div>
-</div>
- 
-<!-- CARDS -->
-<div class="screen hidden" id="cards">
-  <div class="top-bar">
-    <button class="back-btn" id="back-btn">← New topic</button>
-    <span class="counter" id="counter">1 / 5</span>
-  </div>
-  <div class="progress-bar" id="progress-bar"></div>
-  <div class="topic-label" id="topic-label"></div>
-  <div class="card" id="card">
-    <div class="tag" id="card-tag"></div>
-    <div class="card-title" id="card-title"></div>
-    <div class="fact-box" id="fact-box">
-      <div class="fact-text" id="card-fact"></div>
-    </div>
-    <div class="body-text" id="card-body"></div>
-  </div>
-  <div class="nav-btns">
-    <button class="prev-btn" id="prev-btn" disabled>↑ Prev</button>
-    <button class="next-btn" id="next-btn">Next ↓</button>
-  </div>
-</div>
- 
-<!-- END -->
-<div class="screen hidden fade-in" id="end">
-  <div class="end-orb" id="end-orb"></div>
-  <div class="end-title">That's a wrap.</div>
-  <div class="end-sub">You just learned about<br/><span id="end-topic"></span></div>
-  <div class="end-input-wrap">
-    <input id="end-input" placeholder="What's next?" type="text"/>
-    <button class="go-btn" id="end-go-btn">Go →</button>
-  </div>
-  <button class="home-link" id="home-link">Back to home</button>
-</div>
- 
-<script>
-  // =============================================
-  // PASTE YOUR GEMINI API KEY BELOW
-  // =============================================
-  const GEMINI_API_KEY = "AIzaSyAya-o8EvysLv4rRzv-xhVxEEmP2JP0Abc";
-  // =============================================
- 
-  const SUGGESTIONS = ["How UPI works", "US-Iran tensions", "Black Holes", "How Netflix makes money", "Stoicism", "India's space program"];
-  const GRADIENTS = ["linear-gradient(135deg,#667eea,#764ba2)","linear-gradient(135deg,#f093fb,#f5576c)","linear-gradient(135deg,#4facfe,#00f2fe)","linear-gradient(135deg,#43e97b,#38f9d7)","linear-gradient(135deg,#fa709a,#fee140)"];
-  const TAG_COLORS = { geopolitics:"#ef4444",politics:"#ef4444",war:"#ef4444",finance:"#10b981",economics:"#10b981",business:"#f59e0b",science:"#3b82f6",space:"#8b5cf6",tech:"#06b6d4",psychology:"#ec4899",history:"#d97706",health:"#22c55e",culture:"#f97316",sports:"#16a34a" };
- 
-  function getTagColor(tag) {
-    if (!tag) return "#6366f1";
-    const l = tag.toLowerCase();
-    for (const k of Object.keys(TAG_COLORS)) if (l.includes(k)) return TAG_COLORS[k];
-    return "#6366f1";
-  }
- 
-  function getPrompt(n) {
-    return `You are a learning content generator. Generate exactly ${n} educational cards about the given topic. Include current/recent information if the topic is about news or ongoing events.
- 
-Return ONLY raw JSON, no markdown, no backticks:
-{"topic":"display name","cards":[{"tag":"category","title":"punchy title max 8 words","fact":"most surprising fact 1 sentence","body":"2-3 sentence explanation, conversational, no jargon"}]}
- 
-Rules: exactly ${n} cards, each a standalone insight, fact must be surprising, body max 3 sentences.`;
-  }
- 
-  let cards = [], currentIndex = 0, cardCount = 5, animating = false;
-  const bgGradient = GRADIENTS[Math.floor(Math.random() * GRADIENTS.length)];
- 
-  // Setup
-  document.getElementById("orb-bg").style.background = bgGradient;
-  document.getElementById("end-orb").style.background = bgGradient;
- 
-  // Suggestions
-  const sugEl = document.getElementById("suggestions");
-  SUGGESTIONS.forEach(s => {
-    const b = document.createElement("button");
-    b.className = "chip"; b.textContent = s;
-    b.onclick = () => { document.getElementById("main-input").value = s; generate(s); };
-    sugEl.appendChild(b);
-  });
- 
-  // Count buttons
-  document.getElementById("count-btns").addEventListener("click", e => {
-    const btn = e.target.closest(".count-btn");
-    if (!btn) return;
-    document.querySelectorAll(".count-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    cardCount = parseInt(btn.dataset.n);
-  });
- 
-  // Go button
-  document.getElementById("go-btn").onclick = () => generate(document.getElementById("main-input").value);
-  document.getElementById("main-input").addEventListener("keydown", e => { if (e.key === "Enter") generate(e.target.value); });
-  document.getElementById("end-go-btn").onclick = () => { generate(document.getElementById("end-input").value); document.getElementById("end-input").value = ""; };
-  document.getElementById("end-input").addEventListener("keydown", e => { if (e.key === "Enter") { generate(e.target.value); e.target.value = ""; }});
-  document.getElementById("back-btn").onclick = () => showScreen("home");
-  document.getElementById("home-link").onclick = () => showScreen("home");
-  document.getElementById("prev-btn").onclick = () => goTo(currentIndex - 1);
-  document.getElementById("next-btn").onclick = () => {
-    if (currentIndex >= cards.length - 1) showScreen("end");
-    else goTo(currentIndex + 1);
-  };
- 
-  // Touch swipe
-  let touchY = null;
-  document.getElementById("cards").addEventListener("touchstart", e => { touchY = e.touches[0].clientY; });
-  document.getElementById("cards").addEventListener("touchend", e => {
-    if (touchY === null) return;
-    const diff = touchY - e.changedTouches[0].clientY;
-    if (diff > 45) document.getElementById("next-btn").click();
-    else if (diff < -45) document.getElementById("prev-btn").click();
-    touchY = null;
-  });
- 
-  function showScreen(name) {
-    ["home","loading","cards","end"].forEach(id => {
-      const el = document.getElementById(id);
-      if (id === name) { el.classList.remove("hidden"); el.classList.add("fade-in"); }
-      else el.classList.add("hidden");
-    });
-    if (name === "home") setTimeout(() => document.getElementById("main-input").focus(), 100);
-    if (name === "end") {
-      document.getElementById("end-topic").textContent = cards.length > 0 ? document.getElementById("topic-label").textContent : "";
-      setTimeout(() => document.getElementById("end-input").focus(), 100);
-    }
-  }
- 
-  function renderCard(index, dir) {
-    const c = cards[index];
-    const color = getTagColor(c.tag);
-    const cardEl = document.getElementById("card");
- 
-    if (dir) {
-      cardEl.classList.add(dir === "up" ? "slide-up" : "slide-down");
-      setTimeout(() => {
-        fillCard(c, color);
-        cardEl.classList.remove("slide-up","slide-down");
-        animating = false;
-      }, 260);
-    } else {
-      fillCard(c, color);
-    }
- 
-    // Progress
-    const pb = document.getElementById("progress-bar");
-    pb.innerHTML = "";
-    cards.forEach((_, i) => {
-      const seg = document.createElement("div");
-      seg.className = "progress-seg" + (i <= index ? " done" : "");
-      pb.appendChild(seg);
-    });
- 
-    document.getElementById("counter").textContent = `${index + 1} / ${cards.length}`;
-    document.getElementById("prev-btn").disabled = index === 0;
-    document.getElementById("next-btn").textContent = index === cards.length - 1 ? "Finish ✓" : "Next ↓";
-  }
- 
-  function fillCard(c, color) {
-    const tag = document.getElementById("card-tag");
-    tag.textContent = c.tag;
-    tag.style.background = color + "22";
-    tag.style.color = color;
-    tag.style.border = `1px solid ${color}35`;
- 
-    document.getElementById("card-title").textContent = c.title;
- 
-    const fb = document.getElementById("fact-box");
-    fb.style.background = color + "12";
-    fb.style.borderLeft = `3px solid ${color}`;
-    document.getElementById("card-fact").textContent = `"${c.fact}"`;
-    document.getElementById("card-body").textContent = c.body;
-  }
- 
-  function goTo(index) {
-    if (animating || index < 0 || index >= cards.length) return;
-    animating = true;
-    const dir = index > currentIndex ? "up" : "down";
-    currentIndex = index;
-    renderCard(currentIndex, dir);
-  }
- 
-  async function generate(topic) {
-    if (!topic || !topic.trim()) return;
-    if (GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
-      document.getElementById("error-msg").textContent = "Please add your Gemini API key in the file.";
-      return;
-    }
-    document.getElementById("error-msg").textContent = "";
-    document.getElementById("loading-sub").textContent = `${cardCount} cards on the way`;
-    showScreen("loading");
- 
+  async function generate() {
+    const t = topic.trim();
+    if (!t) return;
+    setError("");
+    setCards([]);
+    setIdx(0);
+    setLoading(true);
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: getPrompt(cardCount) + `\n\nTopic: ${topic}` }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 2500 }
-        })
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: `You are SwipeLearn AI. Teach any topic using exactly ${cardCount} short cards. Rules: conversational language, 20-50 words per card, no markdown, no bullets, no intros. Choose fitting titles from: Overview, Key Concepts, Real World Use, Fun Fact, Did You Know, History, How It Works, Common Myths, Quick Tip, Deep Dive.
+Return ONLY a raw JSON array with exactly ${cardCount} items, no backticks, no explanation:
+[{"title":"...","content":"..."},...]`,
+          messages: [{ role: "user", content: `TOPIC: ${t}` }],
+        }),
       });
- 
       const data = await res.json();
-      if (data.error) throw new Error(data.error.message || "API error");
- 
-      let text = data.candidates[0].content.parts[0].text || "";
-      text = text.replace(/```json|```/g, "").trim();
-      const start = text.indexOf("{"), end = text.lastIndexOf("}");
-      if (start === -1 || end === -1) throw new Error("Bad response");
- 
-      const parsed = JSON.parse(text.slice(start, end + 1));
-      cards = parsed.cards;
-      currentIndex = 0;
-      document.getElementById("topic-label").textContent = parsed.topic || topic;
-      renderCard(0, null);
-      showScreen("cards");
- 
-    } catch (err) {
-      document.getElementById("error-msg").textContent = "Something went wrong. Try again.";
-      showScreen("home");
+      const raw = data.content?.filter(b => b.type === "text").map(b => b.text).join("") || "";
+      const clean = raw.replace(/```json|```/g, "").trim();
+      setCards(JSON.parse(clean));
+    } catch {
+      setError("Couldn't generate cards. Try again.");
     }
+    setLoading(false);
   }
-</script>
-</body>
-</html>
+ 
+  function navigate(dir) {
+    const next = idx + dir;
+    if (next < 0 || next >= cards.length) return;
+    setAnimDir(dir);
+    setTimeout(() => { setIdx(next); setAnimDir(null); }, 180);
+  }
+ 
+  function onTouchStart(e) {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }
+ 
+  function onTouchEnd(e) {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      navigate(dx < 0 ? 1 : -1);
+    }
+    touchStartX.current = null;
+  }
+ 
+  const card = cards[idx];
+  const tagColor = card ? (TAG_COLORS[card.title] || { bg: "#E6F1FB", text: "#185FA5" }) : null;
+ 
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "#0e0e10",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "24px 16px",
+      fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
+    }}>
+      <div style={{ textAlign: "center", marginBottom: 28 }}>
+        <div style={{ fontSize: 28, fontWeight: 700, color: "#fff", letterSpacing: "-0.5px" }}>
+          Swipe<span style={{ color: "#A78BFA" }}>Learn</span>
+        </div>
+        <div style={{ fontSize: 13, color: "#6b6b7a", marginTop: 4 }}>AI-powered bite-sized learning</div>
+      </div>
+ 
+      <div style={{ display: "flex", gap: 8, width: "100%", maxWidth: 360, marginBottom: 12 }}>
+        <input
+          value={topic}
+          onChange={e => setTopic(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && generate()}
+          placeholder="Enter any topic..."
+          style={{
+            flex: 1,
+            background: "#1a1a20",
+            border: "1px solid #2e2e3a",
+            borderRadius: 12,
+            padding: "11px 14px",
+            fontSize: 15,
+            color: "#fff",
+            outline: "none",
+          }}
+        />
+        <button
+          onClick={generate}
+          disabled={loading}
+          style={{
+            background: "#7C3AED",
+            color: "#fff",
+            border: "none",
+            borderRadius: 12,
+            padding: "11px 18px",
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: loading ? "not-allowed" : "pointer",
+            opacity: loading ? 0.6 : 1,
+            whiteSpace: "nowrap",
+          }}
+        >{loading ? "..." : "Learn →"}</button>
+      </div>
+ 
+      <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", maxWidth: 360, marginBottom: 20 }}>
+        <span style={{ fontSize: 12, color: "#6b6b7a", whiteSpace: "nowrap" }}>Cards:</span>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {[3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+            <button key={n} onClick={() => setCardCount(n)} style={{
+              background: cardCount === n ? "#7C3AED" : "#1a1a20",
+              color: cardCount === n ? "#fff" : "#6b6b7a",
+              border: `1px solid ${cardCount === n ? "#7C3AED" : "#2e2e3a"}`,
+              borderRadius: 8,
+              padding: "4px 10px",
+              fontSize: 13,
+              fontWeight: cardCount === n ? 600 : 400,
+              cursor: "pointer",
+            }}>{n}</button>
+          ))}
+        </div>
+      </div>
+ 
+      {error && <div style={{ color: "#f87171", fontSize: 13, marginBottom: 16 }}>{error}</div>}
+ 
+      {loading && (
+        <div style={{ color: "#6b6b7a", fontSize: 14, textAlign: "center", padding: "32px 0" }}>
+          Generating cards for <span style={{ color: "#A78BFA" }}>{topic}</span>...
+        </div>
+      )}
+ 
+      {card && !loading && (
+        <>
+          <div style={{ fontSize: 12, color: "#4b4b5a", marginBottom: 10, letterSpacing: "0.06em" }}>
+            {idx + 1} / {cards.length}
+          </div>
+ 
+          <div
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+            style={{
+              width: "100%",
+              maxWidth: 360,
+              background: "#16161c",
+              border: "1px solid #2a2a36",
+              borderRadius: 20,
+              padding: "28px 24px",
+              minHeight: 200,
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+              userSelect: "none",
+              touchAction: "pan-y",
+              transition: animDir !== null ? "opacity 0.18s, transform 0.18s" : "none",
+              opacity: animDir !== null ? 0 : 1,
+              transform: animDir !== null
+                ? `translateX(${animDir < 0 ? "28px" : "-28px"})`
+                : "translateX(0)",
+            }}
+          >
+            <span style={{
+              display: "inline-block",
+              background: tagColor.bg,
+              color: tagColor.text,
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.09em",
+              textTransform: "uppercase",
+              padding: "3px 12px",
+              borderRadius: 999,
+              alignSelf: "flex-start",
+            }}>{card.title}</span>
+ 
+            <div style={{ fontSize: 16, color: "#d1d1e0", lineHeight: 1.65, flex: 1 }}>
+              {card.content}
+            </div>
+ 
+            <div style={{ fontSize: 11, color: "#3a3a4a", textAlign: "center" }}>
+              ← swipe →
+            </div>
+          </div>
+ 
+          <div style={{ display: "flex", gap: 6, marginTop: 18 }}>
+            {cards.map((_, i) => (
+              <div key={i} style={{
+                width: i === idx ? 20 : 6,
+                height: 6,
+                borderRadius: 999,
+                background: i === idx ? "#7C3AED" : "#2e2e3a",
+                transition: "width 0.2s, background 0.2s",
+              }} />
+            ))}
+          </div>
+ 
+          <div style={{ display: "flex", gap: 12, marginTop: 18 }}>
+            <button onClick={() => navigate(-1)} disabled={idx === 0} style={{
+              flex: 1, background: "#1a1a20", border: "1px solid #2e2e3a", borderRadius: 12,
+              padding: "10px 0", color: idx === 0 ? "#3a3a4a" : "#a0a0b0", fontSize: 14,
+              cursor: idx === 0 ? "not-allowed" : "pointer",
+            }}>← Prev</button>
+            <button onClick={() => navigate(1)} disabled={idx === cards.length - 1} style={{
+              flex: 1, background: "#1a1a20", border: "1px solid #2e2e3a", borderRadius: 12,
+              padding: "10px 0", color: idx === cards.length - 1 ? "#3a3a4a" : "#a0a0b0", fontSize: 14,
+              cursor: idx === cards.length - 1 ? "not-allowed" : "pointer",
+            }}>Next →</button>
+          </div>
+        </>
+      )}
+ 
+      {!card && !loading && (
+        <div style={{ color: "#3a3a4a", fontSize: 14, textAlign: "center", marginTop: 16 }}>
+          Type a topic above to start learning
+        </div>
+      )}
+    </div>
+  );
+}
+ 
